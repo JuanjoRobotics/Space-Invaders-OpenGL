@@ -1,7 +1,7 @@
 CXX ?= g++
 CXXFLAGS = -Iinclude
 
-LDFLAGS = -Llib -lglfw3 -lopengl32 -lgdi32 -luser32 -llibassimp-5d
+LDFLAGS = -Llib -lglfw3 -lopengl32 -lgdi32 -luser32 -llibassimp-5d -llibfreetype
 
 SRCS = $(wildcard src/*.cpp src/*.c)
 

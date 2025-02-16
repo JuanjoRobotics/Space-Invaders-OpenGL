@@ -22,6 +22,7 @@ private:
     glm::vec3 Ambient;
     glm::vec3 Diffuse;
     glm::vec3 Specular;
+    glm::vec3 Color;
     // attenuation
     float Constant;
     float Linear;
@@ -32,20 +33,20 @@ private:
 
 public:
     // Directional light
-    Light(glm::vec3 direction, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular)
-          : Direction(direction), Ambient(ambient), Diffuse(diffuse), Specular(specular), Type(DIRECTIONAL) {}
+    Light(glm::vec3 direction, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f))
+          : Direction(direction), Ambient(ambient), Diffuse(diffuse), Specular(specular), Color(color), Type(DIRECTIONAL) {}
     // Point light
-    Light(glm::vec3 position, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular, float constant, float linear, float quadratic)
-          : Position(position), Ambient(ambient), Diffuse(diffuse), Specular(specular), Constant(constant), Linear(linear), Quadratic(quadratic), Type(POINT) {}
+    Light(glm::vec3 position, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular, float constant, float linear, float quadratic, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f))
+          : Position(position), Ambient(ambient), Diffuse(diffuse), Specular(specular), Constant(constant), Linear(linear), Quadratic(quadratic), Color(color), Type(POINT) {}
     // Spot light
-    Light(glm::vec3 position, glm::vec3 direction, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular, float constant, float linear, float quadratic, float cutOff, float outerCutOff)
-         : Position(position), Direction(direction), Ambient(ambient), Diffuse(diffuse), Specular(specular), Constant(constant), Linear(linear), Quadratic(quadratic), CutOff(cutOff), OuterCutOff(outerCutOff), Type(SPOT) {}
+    Light(glm::vec3 position, glm::vec3 direction, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular, float constant, float linear, float quadratic, float cutOff, float outerCutOff, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f))
+         : Position(position), Direction(direction), Ambient(ambient), Diffuse(diffuse), Specular(specular), Constant(constant), Linear(linear), Quadratic(quadratic), CutOff(cutOff), OuterCutOff(outerCutOff), Color(color), Type(SPOT) {}
 
     void setUniforms(Shader &shader,  std::string shaderName) {
         shader.setVec3(shaderName + ".ambient", Ambient);
         shader.setVec3(shaderName + ".diffuse", Diffuse);
         shader.setVec3(shaderName + ".specular", Specular);
-
+        shader.setVec3(shaderName + ".color", Color);
         if (Type != POINT)
             shader.setVec3(shaderName + ".direction", Direction);
         if (Type != DIRECTIONAL) {

@@ -13,8 +13,13 @@
 #include <camera.h>
 #include <model.h>
 #include <player.h>
+#include <alien.h>
+#include <light.h>
+#include <textRenderer.h>
 
 #include <iostream>
+#include <cstdlib>
+#include <ctime>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -38,6 +43,9 @@ float lastFrame = 0.0f;
 
 int main()
 {
+    // Seed the random number generator
+    srand(static_cast<unsigned int>(time(0)));
+
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -72,17 +80,17 @@ int main()
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     stbi_set_flip_vertically_on_load(true);
 
-    // configure global opengl state
-    // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
-    // build and compile shaders
-    // -------------------------
     Shader ourShader("shaders/model_simple.vs", "shaders/model_simple.fs");
+    // Shader ourShader("shaders/model_lighting.vs", "shaders/model_lighting.fs");
 
-    Model invader1("resources/objects/invader-1/source/invader_1.obj");
-    Model invader2("resources/objects/invader-2/source/invader_2.obj");
     Player& player = Player::getInstance("resources/objects/boss-invader/source/master_invader.obj");
+    unsigned int nAliens = 3;
+    std::vector<Alien> aliens = Alien::generate(nAliens);
+
+    // text rendering
+    TextRenderer textRenderer(SCR_WIDTH, SCR_HEIGHT);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -109,24 +117,31 @@ int main()
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
+        if (aliens.size() < nAliens + 2) {
+            Alien::addAlien(aliens);
+        }
         glm::mat4 model = glm::mat4(1.0f);
-        // Draw invader 1
-        model = glm::translate(model, glm::vec3(-1.5f, 0.5f, 0));
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-        ourShader.setMat4("model", model);
-        invader1.Draw(ourShader);
-
-        // Draw invader 2
-        model = glm::translate(model, glm::vec3(1.0f, 0.0f, -0.5f));
-        ourShader.setMat4("model", model);
-        invader2.Draw(ourShader);
+        float relPos = -2.0f;
+        for (auto& alien : aliens) {
+            model = glm::mat4(1.0f);
+            alien.Position.x = relPos;
+            alien.Position.y = 0.5f;
+            relPos += 0.6f;
+            model = glm::translate(model, alien.Position);
+            model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+            ourShader.setMat4("model", model);
+            alien.Draw(ourShader);
+        }
 
         // Draw player (boss)
         model = glm::mat4(1.0f);
         model = glm::translate(model, player.Position);
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
         ourShader.setMat4("model", model);
         player.Draw(ourShader);
+
+        textRenderer.renderText("This is sample text", 25.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
+        textRenderer.renderText("(C) LearnOpenGL.com", 1200.0f, 1000.0f, 0.7f, glm::vec3(0.3, 0.7f, 0.9f));
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
