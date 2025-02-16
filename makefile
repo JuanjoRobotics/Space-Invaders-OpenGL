@@ -16,6 +16,9 @@ endif
 
 all: $(TARGET) copy-dlls
 
+debug: CXXFLAGS += -DENABLE_DEBUG
+debug: clean all
+
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) $(LDFLAGS)
 

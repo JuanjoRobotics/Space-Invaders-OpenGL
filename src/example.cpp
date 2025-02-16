@@ -1,20 +1,26 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <debug.h>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <stb_image.h>
+
 #include <shader.h>
 #include <camera.h>
 #include <model.h>
+#include <player.h>
 
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow *window, Player& player);
+GLFWwindow* createWindow();
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
@@ -44,18 +50,13 @@ int main()
 #endif
 
     // glfw window creation
-    // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
+    GLFWwindow* window = createWindow();
+    if (window == NULL) {
         return -1;
     }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetScrollCallback(window, scroll_callback);
+
+    // glfwSetCursorPosCallback(window, mouse_callback);
+    // glfwSetScrollCallback(window, scroll_callback);
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -81,8 +82,8 @@ int main()
 
     Model invader1("resources/objects/invader-1/source/invader_1.obj");
     Model invader2("resources/objects/invader-2/source/invader_2.obj");
-    // render loop
-    // -----------
+    Player& player = Player::getInstance("resources/objects/boss-invader/source/master_invader.obj");
+
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
@@ -93,7 +94,7 @@ int main()
 
         // input
         // -----
-        processInput(window);
+        processInput(window, player);
 
         // render
         // ------
@@ -110,16 +111,22 @@ int main()
 
         glm::mat4 model = glm::mat4(1.0f);
         // Draw invader 1
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        model = glm::translate(model, glm::vec3(-1.5f, 0.5f, 0));
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
         ourShader.setMat4("model", model);
         invader1.Draw(ourShader);
 
         // Draw invader 2
-        model = glm::translate(model, glm::vec3(1.0f, 0.0f, -0.5f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        model = glm::translate(model, glm::vec3(1.0f, 0.0f, -0.5f));
         ourShader.setMat4("model", model);
         invader2.Draw(ourShader);
+
+        // Draw player (boss)
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, player.Position);
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+        ourShader.setMat4("model", model);
+        player.Draw(ourShader);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -133,21 +140,57 @@ int main()
     return 0;
 }
 
+GLFWwindow* createWindow()
+{
+    const GLFWvidmode* mode;
+    int count;
+    GLFWmonitor** monitors = glfwGetMonitors(&count);
+    GLFWmonitor* monitor;
+    if (count > 2) { // lets avoid the second monitor for now
+        mode = glfwGetVideoMode(monitor = monitors[1]);
+        DEBUG("Multiple monitors detected! Using secondary monitor...");
+    }
+    else {
+        mode = glfwGetVideoMode(monitor = glfwGetPrimaryMonitor());
+        DEBUG("Single monitor detected!");
+    }
+
+    // Calculate the position to center the window
+    int windowPosX = (mode->width - SCR_WIDTH) / 2;
+    int windowPosY = (mode->height - SCR_HEIGHT) / 2;
+
+    // Create the window
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL); // change to monitor to use the secondary
+
+    // Center the window
+    glfwSetWindowPos(window, windowPosX, windowPosY);
+
+    if (window == NULL)
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return NULL;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    return window;
+}
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow *window, Player& player)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-
+    using Direction = Player::Direction;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
+        player.processKeyboard(Direction::UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
+        player.processKeyboard(Direction::DOWN, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
+        player.processKeyboard(Direction::LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+        player.processKeyboard(Direction::RIGHT, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
